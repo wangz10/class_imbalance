@@ -73,12 +73,6 @@ class ResampleForestClassifier(BaseEstimator, MetaEstimatorMixin):
 		self.verbose = verbose
 
 		self.estimators_ = []
-		# if sampling == 'up':
-		# 	self.sampler = OverSampler(verbose=False, **sampler_kwargs)
-		# elif sampling == 'down':
-		# 	self.sampler = UnderSampler(verbose=False, **sampler_kwargs)
-		# else:
-		# 	self.sampler = BootstrapSampler()
 
 
 	def fit(self, X, y):
@@ -121,22 +115,4 @@ class ResampleForestClassifier(BaseEstimator, MetaEstimatorMixin):
 		proba = self.predict_proba(X)
 		return self.classes_.take(np.argmax(proba, axis=1), axis=0)
 
-
-X, y = make_classification(n_classes=2, class_sep=2, weights=[0.1, 0.9],
-	n_informative=3, n_redundant=1, flip_y=0,
-	n_features=20, n_clusters_per_class=1,
-	n_samples=1000, random_state=10)
-
-# print X.shape, y.shape
-# rf = ResampleForestClassifier(DecisionTreeClassifier(), sampling='up', ratio=1.5)
-# # from sklearn.ensemble import RandomForestClassifier
-# # rf = RandomForestClassifier()
-# rf.fit(X, y)
-# probas = rf.predict_proba(X)
-# y_preds = rf.predict(X)
-# # print probas.shape, y_preds.shape
-# from sklearn import metrics
-# print metrics.roc_auc_score(y_preds, probas[:, 1])
-
-# print type(rf.classes_)
 
