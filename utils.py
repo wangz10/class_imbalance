@@ -2,11 +2,12 @@ import sys
 import numpy as np
 RNG = 10
 np.random.seed(RNG)
-from scipy import linalg
+import pandas as pd
 # from sklearn import cross_decomposition
 from sklearn.utils import resample
 from sklearn.datasets import make_classification
 # from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.preprocessing import LabelEncoder
 from sklearn.decomposition import PCA
 
 from unbalanced_dataset import UnderSampler, OverSampler
@@ -24,46 +25,70 @@ sys.path.append('../maayanlab_utils')
 from plots import COLORS10
 
 
-# def down_sampling(X, y):
-# 	'''
-# 	down-sampling the major clsases to get a balanced ratio of both classes
-# 	'''
-# 	classes, counts = np.unique(y, return_counts=True)
-# 	class_counts = dict(zip(classes, counts))
-# 	diff = abs(counts[0] - counts[1])
-# 	if counts[0] < counts[1]:
-# 		minor_class = classes[0]
-# 	elif counts[0] == counts[1]:
-# 		minor_class = None
-# 	else:
-# 		minor_class = classes[1]
+## Data loaders
+def load_synthetic_data():
+	X, y = make_classification(n_classes=2, class_sep=2, weights=[0.9, 0.1],
+		n_informative=2, n_redundant=1, flip_y=0,
+		n_features=50, n_clusters_per_class=1,
+		n_samples=1000, random_state=RNG)	
+	return X, y
 
-# 	if minor_class is not None:
-# 		minor_mask = y == minor_class
-# 		X_sampled, y_sampled = resample(X[~minor_mask], y[~minor_mask], n_samples=np.min(counts))
-# 		X = np.vstack((X[minor_mask], X_sampled))
-# 		y = np.concatenate((y[minor_mask], y_sampled))
-# 	return X, y
+def load_titanic():
+	titanic = pd.read_csv('datasets/Titanic/train.csv')
+	## Process features
+	from sklearn.preprocessing import LabelEncoder
+	le = LabelEncoder()
+	for col in ['Sex', 'Cabin', 'Embarked']:
+		titanic[col] = le.fit_transform(titanic[col])
 
-# def up_sampling(X, y):
-# 	'''
-# 	up-sampling the minor classes
-# 	''' 
-# 	classes, counts = np.unique(y, return_counts=True)
-# 	class_counts = dict(zip(classes, counts))
-# 	diff = abs(counts[0] - counts[1])
-# 	if counts[0] < counts[1]:
-# 		minor_class = classes[0]
-# 	elif counts[0] == counts[1]:
-# 		minor_class = None
-# 	else:
-# 		minor_class = classes[1]
-# 	if minor_class is not None:
-# 		minor_mask = np.where(y == minor_class)[0]
-# 		up_sample_mask = np.random.choice(minor_mask, diff, replace=True)
-# 		X_sampled = X[up_sample_mask]
-# 		y_sampled = y[up_sample_mask]
-# 		X = np.vstack((X, X_sampled))
-# 		y = np.concatenate((y, y_sampled))
-# 	return X, y
+	## Split df into X and y and convert to numpy.array
+	X = titanic.drop(['PassengerId', 'Survived', 'Name', 'Ticket'], axis=1).fillna(-1).values
+	y = titanic['Survived'].values
+	print X.shape, y.shape
+	return X, y
+
+def load_wpbc():
+	bc = pd.read_csv('datasets/wpbc.data', 
+		names=['ID', 'outcome'] + ['Attr%s'%i for i in range(33)])
+	## Split df into X and y and convert to numpy.array
+	X = bc.drop(['ID', 'outcome'], axis=1)
+	y = bc['outcome'].map({'N':0, 'R':1})
+
+	X = X.values
+	y = y.values
+	return X, y
+
+def load_proteomics():
+	proteome = pd.read_csv('datasets/Harmonizome/gene_attribute_matrix_cleaned.txt.gz', 
+		sep='\t', compression='gzip', skiprows=2)
+	## Load HGNC gene family 
+	gene_family = pd.read_csv('datasets/Harmonizome/HGNC_gene_family.txt',sep='\t')
+	# Left join with proteome data
+	gene_family = gene_family[['Approved Symbol', 'Gene family description']]
+	gene_family.set_index('Approved Symbol', inplace=True)
+
+	proteome = proteome.drop(['UniprotAcc', 'GeneID/Brenda Tissue Ontology BTO:'], axis=1)
+	proteome.set_index('GeneSym', inplace=True)
+
+	proteome = proteome.merge(gene_family, left_index=True, right_index=True, how='inner')
+
+	# Split X and y
+	X = proteome.drop(['Gene family description'], axis=1)
+	X = X.values
+	y = proteome['Gene family description']
+	y = map(lambda x: 'kinase' in x.lower(), y)
+	y = np.array(y, dtype=np.int64)
+	return X, y
+
+def pca_plot(X, y):
+	pca = PCA(n_components = 2)
+	X_pc = pca.fit_transform(X)
+	
+	fig, ax = plt.subplots()
+	mask = y==0
+	ax.scatter(X_pc[mask, 0], X_pc[mask, 1], color=COLORS10[0], label='Class 0', alpha=0.5)
+	ax.scatter(X_pc[~mask, 0], X_pc[~mask, 1], color=COLORS10[1], label='Class 1', alpha=0.5)
+	ax.legend(loc='best')
+	return fig
+
 
