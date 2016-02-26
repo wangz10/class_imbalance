@@ -50,6 +50,7 @@ def load_titanic():
 def load_wpbc():
 	bc = pd.read_csv('datasets/wpbc.data', 
 		names=['ID', 'outcome'] + ['Attr%s'%i for i in range(33)])
+	bc = bc.replace('?', -1)
 	## Split df into X and y and convert to numpy.array
 	X = bc.drop(['ID', 'outcome'], axis=1)
 	y = bc['outcome'].map({'N':0, 'R':1})
