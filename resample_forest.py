@@ -11,6 +11,8 @@ from sklearn.utils import check_random_state, as_float_array, _get_n_jobs
 from utils import *
 
 
+MAX_INT = np.iinfo(np.int32).max
+
 class BootstrapSampler(object):
 	"""A very simple BootstrapSampler having a fit_transform method"""
 	def __init__(self, random_state=None):
@@ -36,7 +38,14 @@ def _partition_estimators(n_estimators, n_jobs):
 
 
 def _parallel_build_trees(tree, forest, X, y):
-	X_sample, y_sample = forest.sampler.fit_transform(X, y)
+	if forest.sampling is None:
+		sampler = BootstrapSampler(random_state=tree.random_state)
+	elif forest.sampling == 'up':
+		sampler = OverSampler(random_state=tree.random_state, verbose=False)
+	elif forest.sampling == 'down':
+		sampler = UnderSampler(random_state=tree.random_state, verbose=False)
+
+	X_sample, y_sample = sampler.fit_transform(X, y)
 	tree.fit(X_sample, y_sample, check_input=False)
 	return tree
 
@@ -64,18 +73,20 @@ class ResampleForestClassifier(BaseEstimator, MetaEstimatorMixin):
 		self.verbose = verbose
 
 		self.estimators_ = []
-		if sampling == 'up':
-			self.sampler = OverSampler(**sampler_kwargs)
-		elif sampling == 'down':
-			self.sampler = UnderSampler(**sampler_kwargs)
-		else:
-			self.sampler = BootstrapSampler()
+		# if sampling == 'up':
+		# 	self.sampler = OverSampler(verbose=False, **sampler_kwargs)
+		# elif sampling == 'down':
+		# 	self.sampler = UnderSampler(verbose=False, **sampler_kwargs)
+		# else:
+		# 	self.sampler = BootstrapSampler()
 
 
 	def fit(self, X, y):
+		random_state = check_random_state(self.random_state)
 		trees = []
 		for i in range(self.n_estimators):
 			tree = clone(self.base_estimator)
+			tree.set_params(random_state=random_state.randint(MAX_INT))
 			trees.append(tree)
 
 		trees = Parallel(n_jobs=self.n_jobs, verbose=self.verbose, backend='threading')(
@@ -111,10 +122,10 @@ class ResampleForestClassifier(BaseEstimator, MetaEstimatorMixin):
 		return self.classes_.take(np.argmax(proba, axis=1), axis=0)
 
 
-# X, y = make_classification(n_classes=2, class_sep=2, weights=[0.1, 0.9],
-# 	n_informative=3, n_redundant=1, flip_y=0,
-# 	n_features=20, n_clusters_per_class=1,
-# 	n_samples=1000, random_state=10)
+X, y = make_classification(n_classes=2, class_sep=2, weights=[0.1, 0.9],
+	n_informative=3, n_redundant=1, flip_y=0,
+	n_features=20, n_clusters_per_class=1,
+	n_samples=1000, random_state=10)
 
 # print X.shape, y.shape
 # rf = ResampleForestClassifier(DecisionTreeClassifier(), sampling='up', ratio=1.5)
@@ -123,7 +134,9 @@ class ResampleForestClassifier(BaseEstimator, MetaEstimatorMixin):
 # rf.fit(X, y)
 # probas = rf.predict_proba(X)
 # y_preds = rf.predict(X)
-# print probas.shape, y_preds.shape
+# # print probas.shape, y_preds.shape
+# from sklearn import metrics
+# print metrics.roc_auc_score(y_preds, probas[:, 1])
 
-# # print type(rf.classes_)
+# print type(rf.classes_)
 
