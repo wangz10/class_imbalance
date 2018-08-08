@@ -7,7 +7,3 @@ To run the notebook, install modules on Python2.7 in [requirements.txt](https://
 `
 pip install -r requirements.txt
 `
-
-`
-pip install git+https://github.com/fmfn/UnbalancedDataset
-`

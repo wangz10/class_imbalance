@@ -2,7 +2,8 @@
 Implementation of Forest ensembles with up, down sampling for each tree
 '''
 from joblib import Parallel, delayed
-from unbalanced_dataset import UnderSampler, OverSampler
+from imblearn.under_sampling import RandomUnderSampler as UnderSampler
+from imblearn.over_sampling import RandomOverSampler as OverSampler
 
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
@@ -14,11 +15,11 @@ from utils import *
 MAX_INT = np.iinfo(np.int32).max
 
 class BootstrapSampler(object):
-	"""A very simple BootstrapSampler having a fit_transform method"""
+	"""A very simple BootstrapSampler having a fit_sample method"""
 	def __init__(self, random_state=None):
 		self.random_state = random_state
 	
-	def fit_transform(self, X, y):
+	def fit_sample(self, X, y):
 		n_samples = X.shape[0]
 		random_instance = check_random_state(self.random_state)
 		sample_indices = random_instance.randint(0, n_samples, n_samples)
@@ -41,11 +42,11 @@ def _parallel_build_trees(tree, forest, X, y):
 	if forest.sampling is None:
 		sampler = BootstrapSampler(random_state=tree.random_state)
 	elif forest.sampling == 'up':
-		sampler = OverSampler(random_state=tree.random_state, verbose=False)
+		sampler = OverSampler(random_state=tree.random_state)
 	elif forest.sampling == 'down':
-		sampler = UnderSampler(random_state=tree.random_state, verbose=False)
+		sampler = UnderSampler(random_state=tree.random_state)
 
-	X_sample, y_sample = sampler.fit_transform(X, y)
+	X_sample, y_sample = sampler.fit_sample(X, y)
 	tree.fit(X_sample, y_sample, check_input=False)
 	return tree
 
