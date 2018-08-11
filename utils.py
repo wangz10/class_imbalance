@@ -37,8 +37,8 @@ COLORS10 = [
 
 ## Data loaders
 def load_synthetic_data():
-	X, y = make_classification(n_classes=2, class_sep=2, weights=[0.9, 0.1],
-		n_informative=2, n_redundant=1, flip_y=0,
+	X, y = make_classification(n_classes=2, class_sep=2, weights=[0.95, 0.05],
+		n_informative=2, n_redundant=5, flip_y=0.05,
 		n_features=50, n_clusters_per_class=1,
 		n_samples=1000, random_state=RNG)	
 	return X, y

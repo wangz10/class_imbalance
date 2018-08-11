@@ -1,3 +1,4 @@
 datasets/*
 *.pyc
 .ipynb_checkpoints
+venv/
